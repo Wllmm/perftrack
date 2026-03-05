@@ -1,0 +1,1182 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+<meta charset="UTF-8"/>
+<meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+<title>PerfTrack · Conseiller Financier</title>
+<link href="https://fonts.googleapis.com/css2?family=DM+Mono:wght@300;400;500&family=Syne:wght@600;700;800&display=swap" rel="stylesheet"/>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+<style>
+*, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+:root {
+  --bg: #070d14; --bg2: #0c1825; --bg3: #111e2b; --bg4: #0a1520;
+  --border: #1a3349; --border2: #1e3a4f;
+  --text: #d4e8f5; --muted: #4a7a9b; --accent: #5bc4f5;
+  --green: #4ae8b0; --orange: #f5a623; --red: #f5605a; --purple: #c07af5; --yellow: #f5e642;
+  --font-mono: 'DM Mono', 'Courier New', monospace;
+  --font-display: 'Syne', sans-serif;
+}
+html, body { min-height: 100vh; background: var(--bg); color: var(--text); font-family: var(--font-mono); font-size: 14px; }
+::-webkit-scrollbar { width: 4px; } ::-webkit-scrollbar-track { background: var(--bg2); } ::-webkit-scrollbar-thumb { background: var(--border2); border-radius: 2px; }
+
+/* HEADER */
+.header { background: var(--bg2); border-bottom: 1px solid var(--border); padding: 14px 28px; display: flex; align-items: center; justify-content: space-between; flex-wrap: wrap; gap: 10px; position: sticky; top: 0; z-index: 100; }
+.logo { font-family: var(--font-display); font-size: 20px; font-weight: 800; letter-spacing: -0.5px; }
+.logo span { color: var(--accent); }
+.logo-sub { font-size: 11px; color: var(--muted); margin-top: 2px; }
+.header-right { display: flex; gap: 8px; align-items: center; flex-wrap: wrap; }
+
+/* BUTTONS */
+.btn { font-family: var(--font-mono); font-size: 12px; border-radius: 8px; padding: 8px 16px; cursor: pointer; transition: all 0.2s; border: none; }
+.btn-primary { background: #1a6fa8; color: var(--text); }
+.btn-primary:hover { background: #2180c0; }
+.btn-ghost { background: transparent; color: var(--muted); border: 1px solid var(--border2); }
+.btn-ghost:hover, .btn-ghost.active { border-color: #2a7aad; color: var(--accent); }
+.btn-sm { padding: 4px 10px; font-size: 11px; }
+.btn-danger { color: var(--red); border-color: #4a2020; }
+.btn-danger:hover { background: #2a0f0f; }
+
+/* MODAL */
+.modal-overlay { position: fixed; inset: 0; background: rgba(7,13,20,0.88); z-index: 200; display: none; align-items: flex-start; justify-content: center; backdrop-filter: blur(4px); padding: 24px 16px; overflow-y: auto; }
+.modal-overlay.open { display: flex; animation: fadeIn 0.2s ease; }
+.modal { background: var(--bg2); border: 1px solid var(--border2); border-radius: 16px; padding: 28px; width: 100%; max-width: 760px; animation: slideUp 0.25s ease; }
+.modal-title { font-family: var(--font-display); font-size: 17px; font-weight: 800; color: var(--accent); margin-bottom: 4px; }
+.modal-sub { font-size: 11px; color: var(--muted); margin-bottom: 8px; }
+@keyframes slideUp { from { opacity:0; transform:translateY(16px); } to { opacity:1; transform:translateY(0); } }
+@keyframes fadeIn { from { opacity:0; } to { opacity:1; } }
+
+/* SECTION BLOCKS */
+.section-block { border: 1px solid var(--border); border-radius: 12px; padding: 16px 18px; margin-bottom: 14px; }
+.section-block-title { font-family: var(--font-display); font-size: 12px; font-weight: 700; text-transform: uppercase; letter-spacing: 0.07em; margin-bottom: 14px; padding-bottom: 8px; border-bottom: 1px solid var(--border); display: flex; align-items: center; gap: 8px; }
+.form-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(150px, 1fr)); gap: 10px; }
+.form-grid-3 { display: grid; grid-template-columns: repeat(3, 1fr); gap: 10px; }
+.form-group label { display: block; font-size: 11px; color: var(--muted); margin-bottom: 5px; }
+.input { background: var(--bg); border: 1px solid var(--border2); border-radius: 8px; color: var(--text); font-family: var(--font-mono); font-size: 13px; padding: 9px 13px; width: 100%; outline: none; transition: border-color 0.2s; }
+.input:focus { border-color: #2a7aad; }
+select.input { appearance: none; cursor: pointer; }
+textarea.input { resize: vertical; min-height: 56px; }
+input[type="date"].input { color-scheme: dark; }
+input[type="date"].input::-webkit-calendar-picker-indicator { filter: invert(0.7) sepia(1) saturate(2) hue-rotate(170deg); cursor: pointer; opacity: 0.8; }
+input[type="date"].input::-webkit-datetime-edit { color: #d4e8f5; }
+input[type="date"].input::-webkit-datetime-edit-fields-wrapper { color: #d4e8f5; }
+input[type="date"].input::-webkit-datetime-edit-text { color: #4a7a9b; }
+
+/* STAR RATING */
+.star-row { display: flex; gap: 6px; align-items: center; }
+.star-btn { background: none; border: none; font-size: 20px; cursor: pointer; transition: transform 0.15s; line-height: 1; padding: 2px; filter: grayscale(1) opacity(0.35); }
+.star-btn.active { filter: none; transform: scale(1.1); }
+.star-label { font-size: 11px; color: var(--muted); margin-left: 6px; }
+
+/* CHECKBOX ROW */
+.check-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 8px; }
+.checkbox-row { display: flex; align-items: center; gap: 10px; padding: 9px 13px; background: var(--bg); border: 1px solid var(--border2); border-radius: 8px; cursor: pointer; transition: border-color 0.2s; }
+.checkbox-row:hover { border-color: #2a7aad; }
+.checkbox-row input[type=checkbox] { width: 15px; height: 15px; accent-color: var(--accent); cursor: pointer; flex-shrink: 0; }
+.checkbox-row label { font-size: 12px; color: var(--text); cursor: pointer; line-height: 1.3; }
+.form-actions { display: flex; gap: 8px; margin-top: 20px; padding-top: 16px; border-top: 1px solid var(--border); }
+
+/* MAIN */
+.main { padding: 24px 28px; max-width: 1500px; margin: 0 auto; }
+
+/* KPI */
+.kpi-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(165px, 1fr)); gap: 12px; margin-bottom: 26px; }
+.kpi-card { background: var(--bg2); border: 1px solid var(--border); border-radius: 12px; padding: 16px 18px; transition: border-color 0.2s, transform 0.2s; }
+.kpi-card:hover { border-color: #2a7aad; transform: translateY(-2px); }
+.kpi-icon { font-size: 17px; margin-bottom: 7px; }
+.kpi-value { font-family: var(--font-display); font-size: 26px; font-weight: 800; line-height: 1; }
+.kpi-unit { font-size: 12px; font-weight: 600; }
+.kpi-label { font-size: 11px; color: var(--muted); margin-top: 4px; line-height: 1.4; }
+.progress-wrap { margin-top: 9px; }
+.progress-info { display: flex; justify-content: space-between; font-size: 10px; color: var(--muted); margin-bottom: 4px; }
+.progress-bar { height: 3px; background: var(--border); border-radius: 2px; }
+.progress-fill { height: 100%; border-radius: 2px; transition: width 0.6s ease; }
+
+/* TABS */
+.tabs { border-bottom: 1px solid var(--border); margin-bottom: 22px; display: flex; gap: 4px; }
+.tab { background: transparent; border: none; border-bottom: 2px solid transparent; color: var(--muted); font-family: var(--font-mono); font-size: 13px; padding: 8px 16px; cursor: pointer; transition: all 0.2s; }
+.tab.active { color: var(--accent); border-bottom-color: var(--accent); }
+.tab-content { display: none; }
+.tab-content.active { display: block; animation: fadeIn 0.2s ease; }
+
+/* PIPELINE */
+.pipeline { display: grid; grid-template-columns: repeat(6, 1fr); gap: 10px; }
+.pipeline-col { background: var(--bg2); border: 1px solid var(--border); border-radius: 12px; padding: 12px; min-height: 120px; }
+.pipeline-col-title { font-family: var(--font-display); font-size: 10px; font-weight: 700; text-transform: uppercase; letter-spacing: 0.06em; margin-bottom: 10px; padding-bottom: 7px; border-bottom: 1px solid var(--border); display: flex; justify-content: space-between; align-items: center; }
+.pipeline-badge { background: var(--bg3); border-radius: 20px; padding: 2px 7px; font-size: 10px; }
+.pipeline-card { background: var(--bg3); border: 1px solid var(--border); border-radius: 8px; padding: 9px 11px; margin-bottom: 7px; cursor: pointer; transition: border-color 0.2s, transform 0.15s; }
+.pipeline-card:hover { border-color: #2a7aad; transform: translateY(-1px); }
+.pipeline-card-name { font-size: 12px; font-weight: 500; color: var(--text); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; margin-bottom: 3px; }
+.pipeline-card-meta { font-size: 10px; color: var(--muted); }
+.pipeline-card-flag { font-size: 10px; margin-top: 3px; }
+.pipeline-card-score { font-size: 10px; margin-top: 3px; }
+
+/* TABLE */
+.table-wrap { background: var(--bg2); border: 1px solid var(--border); border-radius: 12px; overflow: hidden; }
+.table-head { display: grid; grid-template-columns: 140px 80px 80px 60px 60px 60px 60px 60px 110px 120px; gap: 6px; padding: 10px 16px; font-size: 10px; color: var(--muted); text-transform: uppercase; letter-spacing: 0.05em; border-bottom: 1px solid var(--border); background: var(--bg3); }
+.table-row { display: grid; grid-template-columns: 140px 80px 80px 60px 60px 60px 60px 60px 110px 120px; gap: 6px; align-items: center; padding: 10px 16px; border-bottom: 1px solid #0d1c2a; font-size: 12px; transition: background 0.15s; cursor: pointer; }
+.table-row:hover { background: var(--bg3); }
+.table-row:last-child { border-bottom: none; }
+.status-pill { display: inline-block; padding: 2px 9px; border-radius: 20px; font-size: 10px; font-weight: 500; }
+.mini-stars { font-size: 11px; letter-spacing: -1px; }
+
+/* CHARTS */
+.charts-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 18px; }
+.chart-card { background: var(--bg2); border: 1px solid var(--border); border-radius: 12px; padding: 18px; }
+.chart-title { font-family: var(--font-display); font-size: 13px; font-weight: 700; color: #7eb8d4; margin-bottom: 14px; }
+.chart-wrap { position: relative; height: 210px; }
+.funnel { display: flex; flex-direction: column; gap: 7px; }
+.funnel-step { display: flex; align-items: center; gap: 12px; }
+.funnel-bar-wrap { flex: 1; height: 30px; background: var(--bg3); border-radius: 6px; overflow: hidden; }
+.funnel-bar { height: 100%; border-radius: 6px; display: flex; align-items: center; padding: 0 10px; font-size: 11px; font-weight: 500; transition: width 0.8s ease; white-space: nowrap; }
+.funnel-label { width: 120px; font-size: 11px; color: var(--muted); text-align: right; }
+.funnel-pct { width: 42px; font-size: 11px; color: var(--muted); }
+
+.notif { position: fixed; bottom: 24px; right: 24px; background: #1a4a2e; border: 1px solid var(--green); color: var(--green); padding: 12px 20px; border-radius: 10px; font-size: 12px; opacity: 0; transform: translateY(10px); transition: all 0.3s; z-index: 999; pointer-events: none; }
+.notif.show { opacity: 1; transform: translateY(0); }
+.empty { text-align: center; padding: 50px 0; color: var(--muted); }
+.empty-icon { font-size: 36px; margin-bottom: 12px; }
+
+.notif { position: fixed; bottom: 24px; right: 16px; left: 16px; background: #1a4a2e; border: 1px solid var(--green); color: var(--green); padding: 12px 20px; border-radius: 10px; font-size: 12px; opacity: 0; transform: translateY(10px); transition: all 0.3s; z-index: 999; pointer-events: none; text-align: center; }
+.notif.show { opacity: 1; transform: translateY(0); }
+.empty { text-align: center; padding: 50px 0; color: var(--muted); }
+.empty-icon { font-size: 36px; margin-bottom: 12px; }
+
+/* TABLET */
+@media (max-width: 1100px) {
+  .pipeline { grid-template-columns: repeat(3, 1fr); }
+  .charts-grid { grid-template-columns: 1fr; }
+}
+
+/* MOBILE */
+@media (max-width: 680px) {
+  /* Header */
+  .header { padding: 10px 14px; gap: 8px; }
+  .logo { font-size: 17px; }
+  .logo-sub { display: none; }
+  .header-right { gap: 5px; width: 100%; justify-content: space-between; }
+  .header-right .btn { padding: 7px 10px; font-size: 11px; }
+
+  /* Main */
+  .main { padding: 12px; }
+
+  /* KPI grid — 2 colonnes sur mobile */
+  .kpi-grid { grid-template-columns: repeat(2, 1fr); gap: 8px; margin-bottom: 16px; }
+  .kpi-card { padding: 12px 14px; }
+  .kpi-value { font-size: 22px !important; }
+  .kpi-icon { font-size: 15px; margin-bottom: 5px; }
+  .kpi-label { font-size: 10px; }
+
+  /* Tabs */
+  .tabs { gap: 0; overflow-x: auto; -webkit-overflow-scrolling: touch; }
+  .tab { font-size: 12px; padding: 8px 12px; white-space: nowrap; }
+
+  /* Pipeline — 1 colonne sur mobile */
+  .pipeline { grid-template-columns: 1fr 1fr; gap: 8px; }
+  .pipeline-col { padding: 10px; }
+  .pipeline-col-title { font-size: 9px; }
+  .pipeline-card { padding: 8px 10px; }
+  .pipeline-card-name { font-size: 11px; }
+  .pipeline-card-meta { font-size: 9px; }
+
+  /* Table — scrollable horizontalement */
+  .table-wrap { overflow-x: auto; -webkit-overflow-scrolling: touch; }
+  .table-head { grid-template-columns: 110px 70px 70px 50px 50px 50px 50px 50px 90px 100px; min-width: 700px; font-size: 9px; padding: 8px 12px; }
+  .table-row { grid-template-columns: 110px 70px 70px 50px 50px 50px 50px 50px 90px 100px; min-width: 700px; font-size: 11px; padding: 9px 12px; }
+
+  /* Charts */
+  .charts-grid { grid-template-columns: 1fr; gap: 12px; }
+  .chart-wrap { height: 180px; }
+
+  /* Funnel */
+  .funnel-label { width: 90px; font-size: 10px; }
+  .funnel-pct { width: 34px; font-size: 10px; }
+  .funnel-bar { font-size: 10px; }
+
+  /* Modal */
+  .modal-overlay { padding: 0; align-items: flex-end; }
+  .modal { border-radius: 20px 20px 0 0; max-height: 92vh; padding: 20px 16px; border-left: none; border-right: none; border-bottom: none; }
+  .modal-title { font-size: 15px; }
+  .form-grid { grid-template-columns: 1fr 1fr; gap: 8px; }
+  .form-grid-3 { grid-template-columns: 1fr 1fr; }
+  .check-grid { grid-template-columns: 1fr; gap: 6px; }
+  .checkbox-row { padding: 8px 11px; }
+  .section-block { padding: 12px 14px; margin-bottom: 10px; }
+  .section-block-title { font-size: 11px; }
+  .input { font-size: 16px; } /* 16px évite le zoom auto iOS */
+  .star-btn { font-size: 18px; }
+  .form-actions { flex-wrap: wrap; }
+  .form-actions .btn { flex: 1; text-align: center; }
+
+  /* Stats cards */
+  #statsCards { grid-template-columns: repeat(2, 1fr) !important; gap: 8px !important; }
+}
+
+@media (max-width: 380px) {
+  .kpi-grid { grid-template-columns: 1fr 1fr; }
+  .pipeline { grid-template-columns: 1fr; }
+  .header-right .btn span { display: none; }
+}
+</style>
+</head>
+<body>
+
+<!-- LOGIN SCREEN -->
+<div id="loginScreen" style="display:none;position:fixed;inset:0;background:var(--bg);z-index:500;display:flex;align-items:center;justify-content:center;padding:24px">
+  <div style="background:var(--bg2);border:1px solid var(--border2);border-radius:16px;padding:36px 32px;width:100%;max-width:380px;text-align:center">
+    <div style="font-family:var(--font-display);font-size:26px;font-weight:800;margin-bottom:6px"><span style="color:var(--accent)">PERF</span>TRACK</div>
+    <div style="font-size:11px;color:var(--muted);margin-bottom:32px">Conseil Financier · Connexion</div>
+    <div style="margin-bottom:14px;text-align:left">
+      <label style="font-size:11px;color:var(--muted);display:block;margin-bottom:6px">Email</label>
+      <input class="input" type="email" id="loginEmail" placeholder="ton@email.com" style="font-size:16px"/>
+    </div>
+    <div style="margin-bottom:24px;text-align:left">
+      <label style="font-size:11px;color:var(--muted);display:block;margin-bottom:6px">Mot de passe</label>
+      <input class="input" type="password" id="loginPassword" placeholder="••••••••" style="font-size:16px" onkeydown="if(event.key==='Enter')handleLogin()"/>
+    </div>
+    <button class="btn btn-primary" style="width:100%;padding:12px;font-size:14px" onclick="handleLogin()">Se connecter</button>
+    <div id="loginError" style="color:var(--red);font-size:12px;margin-top:12px;display:none"></div>
+    <div style="margin-top:20px;padding-top:16px;border-top:1px solid var(--border)">
+      <button onclick="showSignup()" style="background:none;border:none;color:var(--muted);font-size:11px;cursor:pointer;font-family:var(--font-mono)">Pas encore de compte ? Créer un compte</button>
+    </div>
+  </div>
+</div>
+
+<!-- SIGNUP SCREEN -->
+<div id="signupScreen" style="display:none;position:fixed;inset:0;background:var(--bg);z-index:500;align-items:center;justify-content:center;padding:24px">
+  <div style="background:var(--bg2);border:1px solid var(--border2);border-radius:16px;padding:36px 32px;width:100%;max-width:380px;text-align:center">
+    <div style="font-family:var(--font-display);font-size:26px;font-weight:800;margin-bottom:6px"><span style="color:var(--accent)">PERF</span>TRACK</div>
+    <div style="font-size:11px;color:var(--muted);margin-bottom:32px">Créer mon compte</div>
+    <div style="margin-bottom:14px;text-align:left">
+      <label style="font-size:11px;color:var(--muted);display:block;margin-bottom:6px">Email</label>
+      <input class="input" type="email" id="signupEmail" placeholder="ton@email.com" style="font-size:16px"/>
+    </div>
+    <div style="margin-bottom:24px;text-align:left">
+      <label style="font-size:11px;color:var(--muted);display:block;margin-bottom:6px">Mot de passe</label>
+      <input class="input" type="password" id="signupPassword" placeholder="min. 6 caractères" style="font-size:16px" onkeydown="if(event.key==='Enter')handleSignup()"/>
+    </div>
+    <button class="btn btn-primary" style="width:100%;padding:12px;font-size:14px" onclick="handleSignup()">Créer le compte</button>
+    <div id="signupError" style="color:var(--red);font-size:12px;margin-top:12px;display:none"></div>
+    <div id="signupSuccess" style="color:var(--green);font-size:12px;margin-top:12px;display:none"></div>
+    <div style="margin-top:20px;padding-top:16px;border-top:1px solid var(--border)">
+      <button onclick="showLogin()" style="background:none;border:none;color:var(--muted);font-size:11px;cursor:pointer;font-family:var(--font-mono)">← Retour à la connexion</button>
+    </div>
+  </div>
+</div>
+
+
+<div class="header">
+  <div>
+    <div class="logo"><span>PERF</span>TRACK <span style="font-size:13px;color:var(--muted);font-family:var(--font-mono);font-weight:400">· Conseil Financier</span></div>
+    <div class="logo-sub">Suivi prospect → signature · Une fiche par client</div>
+  </div>
+  <div class="header-right">
+    <button class="btn btn-ghost active" data-period="30" onclick="setPeriod(this,30)">30j</button>
+    <button class="btn btn-ghost" data-period="90" onclick="setPeriod(this,90)">90j</button>
+    <button class="btn btn-ghost" data-period="365" onclick="setPeriod(this,365)">1 an</button>
+    <button class="btn btn-ghost" data-period="9999" onclick="setPeriod(this,9999)">Tout</button>
+    <div style="width:1px;height:24px;background:var(--border2);margin:0 2px"></div>
+    <button class="btn btn-ghost" onclick="exportData()" title="Sauvegarder">💾</button>
+    <label class="btn btn-ghost" style="cursor:pointer" title="Restaurer">📂<input type="file" id="importInput" accept=".json" onchange="importData(event)" style="display:none"/></label>
+    <button class="btn btn-ghost btn-danger" onclick="resetData()" title="Remise à zéro">🗑️</button>
+    <button class="btn btn-ghost" onclick="handleLogout()" title="Déconnexion">🚪</button>
+    <button class="btn btn-primary" onclick="openModal()">+ Prospect</button>
+  </div>
+</div>
+
+<!-- MODAL -->
+<div class="modal-overlay" id="modalOverlay" onclick="closeModalOutside(event)">
+<div class="modal">
+  <div class="modal-title" id="modalTitle">Nouveau prospect</div>
+  <div class="modal-sub">Remplis ce que tu sais — tu mets à jour au fur et à mesure du process.</div>
+
+  <!-- GÉNÉRAL -->
+  <div class="section-block">
+    <div class="section-block-title" style="color:var(--accent)">📋 Informations générales</div>
+    <div class="form-grid">
+      <div class="form-group" style="grid-column:1/-1"><label>Nom / Prénom *</label><input class="input" id="fNom" placeholder="ex: Martin Dupont"/></div>
+      <div class="form-group"><label>Date du premier contact *</label><input class="input" type="date" id="fDateContact"/></div>
+      <div class="form-group"><label>Canal de contact</label>
+        <select class="input" id="fCanal">
+          <option value="">—</option>
+          <option>Réseau / Recommandation</option>
+          <option>LinkedIn</option>
+          <option>Événement</option>
+          <option>Téléphone</option>
+          <option>Autre</option>
+        </select>
+      </div>
+      <div class="form-group"><label>Date R1</label><input class="input" type="date" id="fDateR1"/></div>
+      <div class="form-group"><label>Date R2</label><input class="input" type="date" id="fDateR2"/></div>
+      <div class="form-group"><label>Date R3</label><input class="input" type="date" id="fDateR3"/></div>
+      <div class="form-group"><label>Date R4</label><input class="input" type="date" id="fDateR4"/></div>
+    </div>
+    <div style="margin-top:10px" class="check-grid">
+      <div class="checkbox-row"><input type="checkbox" id="fReponse"/><label for="fReponse">✅ Réponse reçue (échange informel réussi)</label></div>
+      <div class="checkbox-row"><input type="checkbox" id="fRdvPlace" onchange="updateSectionLocks()"/><label for="fRdvPlace">📅 RDV placés (les 4)</label></div>
+    </div>
+  </div>
+
+  <!-- DOCUMENTS -->
+  <div class="section-block" id="sectionDocs">
+    <div class="section-block-title" style="color:var(--purple)">📁 Documents<span class="lock-badge" style="font-size:10px;color:var(--muted);font-weight:400;margin-left:8px"></span></div>
+    <div class="check-grid">
+      <div class="checkbox-row"><input type="checkbox" id="fDocsEnvoyes"/><label for="fDocsEnvoyes">Docs génériques envoyés</label></div>
+      <div class="checkbox-row"><input type="checkbox" id="fDocsRecus"/><label for="fDocsRecus">Docs client reçus</label></div>
+    </div>
+  </div>
+
+  <!-- R1 -->
+  <div class="section-block" id="sectionR1">
+    <div class="section-block-title" style="color:var(--accent)">🤝 R1 — Découverte<span class="lock-badge" style="font-size:10px;color:var(--muted);font-weight:400;margin-left:8px"></span></div>
+    <div class="check-grid" style="margin-bottom:12px">
+      <div class="checkbox-row"><input type="checkbox" id="fR1" onchange="updateSectionLocks()"/><label for="fR1">R1 réalisé</label></div>
+      <div class="checkbox-row"><input type="checkbox" id="fCrR1"/><label for="fCrR1">Compte-rendu R1 envoyé</label></div>
+    </div>
+    <div class="form-grid">
+      <div class="form-group">
+        <label>Impression générale</label>
+        <div class="star-row" id="stars-r1impression" data-field="fR1impression">
+          <button class="star-btn" data-val="1" onclick="setStar('fR1impression',1)">⭐</button>
+          <button class="star-btn" data-val="2" onclick="setStar('fR1impression',2)">⭐</button>
+          <button class="star-btn" data-val="3" onclick="setStar('fR1impression',3)">⭐</button>
+          <button class="star-btn" data-val="4" onclick="setStar('fR1impression',4)">⭐</button>
+          <button class="star-btn" data-val="5" onclick="setStar('fR1impression',5)">⭐</button>
+          <span class="star-label" id="label-fR1impression">—</span>
+        </div>
+        <input type="hidden" id="fR1impression" value="0"/>
+      </div>
+      <div class="form-group">
+        <label>Potentiel estimé (€)</label>
+        <input class="input" type="number" id="fR1potentiel" placeholder="ex: 50000"/>
+      </div>
+      <div class="form-group">
+        <label>Noms de reco obtenus</label>
+        <input class="input" type="number" id="fR1recoNoms" placeholder="ex: 3" min="0"/>
+      </div>
+    </div>
+  </div>
+
+  <!-- R2 -->
+  <div class="section-block" id="sectionR2">
+    <div class="section-block-title" style="color:var(--green)">📊 R2 — Préconisation<span class="lock-badge" style="font-size:10px;color:var(--muted);font-weight:400;margin-left:8px"></span></div>
+    <div class="check-grid" style="margin-bottom:12px">
+      <div class="checkbox-row"><input type="checkbox" id="fR2" onchange="updateSectionLocks()"/><label for="fR2">R2 réalisé</label></div>
+      <div class="checkbox-row"><input type="checkbox" id="fDocsPreco"/><label for="fDocsPreco">Docs préconisation envoyés</label></div>
+    </div>
+    <div class="form-grid">
+      <div class="form-group">
+        <label>Sentiment du RDV (ressenti)</label>
+        <div class="star-row" id="stars-fR2sentiment" data-field="fR2sentiment">
+          <button class="star-btn" data-val="1" onclick="setStar('fR2sentiment',1)">⭐</button>
+          <button class="star-btn" data-val="2" onclick="setStar('fR2sentiment',2)">⭐</button>
+          <button class="star-btn" data-val="3" onclick="setStar('fR2sentiment',3)">⭐</button>
+          <button class="star-btn" data-val="4" onclick="setStar('fR2sentiment',4)">⭐</button>
+          <button class="star-btn" data-val="5" onclick="setStar('fR2sentiment',5)">⭐</button>
+          <span class="star-label" id="label-fR2sentiment">—</span>
+        </div>
+        <input type="hidden" id="fR2sentiment" value="0"/>
+      </div>
+      <div class="form-group">
+        <label>Réaction client à la préco</label>
+        <div class="star-row" id="stars-fR2reactionPreco" data-field="fR2reactionPreco">
+          <button class="star-btn" data-val="1" onclick="setStar('fR2reactionPreco',1)">⭐</button>
+          <button class="star-btn" data-val="2" onclick="setStar('fR2reactionPreco',2)">⭐</button>
+          <button class="star-btn" data-val="3" onclick="setStar('fR2reactionPreco',3)">⭐</button>
+          <button class="star-btn" data-val="4" onclick="setStar('fR2reactionPreco',4)">⭐</button>
+          <button class="star-btn" data-val="5" onclick="setStar('fR2reactionPreco',5)">⭐</button>
+          <span class="star-label" id="label-fR2reactionPreco">—</span>
+        </div>
+        <input type="hidden" id="fR2reactionPreco" value="0"/>
+      </div>
+      <div class="form-group">
+        <label>Noms de reco obtenus</label>
+        <input class="input" type="number" id="fR2recoNoms" placeholder="ex: 2" min="0"/>
+      </div>
+      <div class="form-group">
+        <label>Numéros de reco obtenus</label>
+        <input class="input" type="number" id="fR2recoNumeros" placeholder="ex: 1" min="0"/>
+      </div>
+    </div>
+  </div>
+
+  <!-- R3 -->
+  <div class="section-block" id="sectionR3">
+    <div class="section-block-title" style="color:var(--orange)">🔍 R3 — Validation<span class="lock-badge" style="font-size:10px;color:var(--muted);font-weight:400;margin-left:8px"></span></div>
+    <div class="check-grid" style="margin-bottom:12px">
+      <div class="checkbox-row"><input type="checkbox" id="fR3" onchange="updateSectionLocks()"/><label for="fR3">R3 réalisé</label></div>
+      <div class="checkbox-row"><input type="checkbox" id="fPrecoModif"/><label for="fPrecoModif">🔄 Préconisation modifiée</label></div>
+      <div class="checkbox-row"><input type="checkbox" id="fR3Signe" onchange="updateSectionLocks()"/><label for="fR3Signe">✅ Accord pour signer</label></div>
+    </div>
+    <div class="form-grid">
+      <div class="form-group">
+        <label>Noms de reco obtenus</label>
+        <input class="input" type="number" id="fR3recoNoms" placeholder="ex: 2" min="0"/>
+      </div>
+      <div class="form-group">
+        <label>Numéros de reco obtenus</label>
+        <input class="input" type="number" id="fR3recoNumeros" placeholder="ex: 1" min="0"/>
+      </div>
+      <div class="form-group" style="grid-column:1/-1">
+        <label>Retour client / remarques</label>
+        <textarea class="input" id="fR3retour" placeholder="Objections, ajustements demandés..."></textarea>
+      </div>
+    </div>
+  </div>
+
+  <!-- R4 -->
+  <div class="section-block" id="sectionR4">
+    <div class="section-block-title" style="color:var(--yellow)">✍️ R4 — Signature<span class="lock-badge" style="font-size:10px;color:var(--muted);font-weight:400;margin-left:8px"></span></div>
+    <div class="check-grid" style="margin-bottom:12px">
+      <div class="checkbox-row"><input type="checkbox" id="fR4"/><label for="fR4">R4 réalisé — Client signé ✅</label></div>
+    </div>
+    <div class="form-grid">
+      <div class="form-group">
+        <label>Montant final signé (€)</label>
+        <input class="input" type="number" id="fR4montant" placeholder="ex: 45000"/>
+      </div>
+      <div class="form-group">
+        <label>Noms de reco obtenus</label>
+        <input class="input" type="number" id="fR4recoNoms" placeholder="ex: 2" min="0"/>
+      </div>
+      <div class="form-group">
+        <label>Numéros de reco obtenus</label>
+        <input class="input" type="number" id="fR4recoNumeros" placeholder="ex: 1" min="0"/>
+      </div>
+    </div>
+  </div>
+
+  <!-- NOTES -->
+  <div class="section-block">
+    <div class="section-block-title" style="color:var(--muted)">📝 Notes libres</div>
+    <textarea class="input" id="fNotes" rows="2" placeholder="Contexte, observations..."></textarea>
+  </div>
+
+  <div class="form-actions">
+    <button class="btn btn-primary" onclick="submitProspect()">Enregistrer</button>
+    <button class="btn btn-ghost" onclick="closeModal()">Annuler</button>
+    <button class="btn btn-ghost btn-danger btn-sm" id="btnDelete" style="display:none;margin-left:auto" onclick="deleteProspect()">Supprimer</button>
+  </div>
+</div>
+</div>
+
+<!-- MAIN -->
+<div class="main">
+  <div class="kpi-grid" id="kpiGrid"></div>
+  <div class="tabs">
+    <button class="tab active" onclick="switchTab('pipeline',this)">Pipeline</button>
+    <button class="tab" onclick="switchTab('prospects',this)">Tous les prospects</button>
+    <button class="tab" onclick="switchTab('stats',this)">Statistiques</button>
+  </div>
+
+  <div class="tab-content active" id="tab-pipeline">
+    <div class="pipeline" id="pipelineBoard"></div>
+    <div class="empty" id="emptyPipeline" style="display:none">
+      <div class="empty-icon">🎯</div>
+      <div style="margin-bottom:14px">Aucun prospect — commence par en ajouter un</div>
+      <button class="btn btn-primary" onclick="openModal()">+ Nouveau prospect</button>
+    </div>
+  </div>
+
+  <div class="tab-content" id="tab-prospects">
+    <div class="table-wrap">
+      <div class="table-head">
+        <span>Nom</span><span>Canal</span><span>Contact</span>
+        <span style="text-align:center">RDV</span>
+        <span style="text-align:center">R1</span>
+        <span style="text-align:center">R2</span>
+        <span style="text-align:center">R3</span>
+        <span style="text-align:center">R4</span>
+        <span>Potentiel</span>
+        <span>Statut</span>
+      </div>
+      <div id="tableBody"></div>
+    </div>
+  </div>
+
+  <div class="tab-content" id="tab-stats">
+
+    <!-- Stats volumes signés + reco -->
+    <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(200px,1fr));gap:12px;margin-bottom:18px" id="statsCards"></div>
+
+    <div style="margin-bottom:18px">
+      <div class="chart-card">
+        <div class="chart-title">Entonnoir de conversion</div>
+        <div class="funnel" id="funnelChart"></div>
+      </div>
+    </div>
+    <div class="charts-grid">
+      <div class="chart-card"><div class="chart-title">Prospects par mois</div><div class="chart-wrap"><canvas id="chartMensuel"></canvas></div></div>
+      <div class="chart-card"><div class="chart-title">Canaux de contact</div><div class="chart-wrap"><canvas id="chartCanaux"></canvas></div></div>
+      <div class="chart-card"><div class="chart-title">Volume signé vs potentiel (€)</div><div class="chart-wrap"><canvas id="chartVolumes"></canvas></div></div>
+      <div class="chart-card"><div class="chart-title">Reco moy. par RDV — noms obtenus au R1 &amp; numéros</div><div class="chart-wrap"><canvas id="chartRecos"></canvas></div></div>
+    </div>
+  </div>
+</div>
+
+<div class="notif" id="notif"></div>
+
+<script>
+// SUPABASE
+const SUPA_URL = 'https://feegutnmgechlnxqpocy.supabase.co';
+const SUPA_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImZlZWd1dG5tZ2VjaGxueHFwb2N5Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzI3MDI3MjAsImV4cCI6MjA4ODI3ODcyMH0.QwMZOmEUxSqrmsjkajdCda9PHqplWcLrEQJAQxDn24o';
+const supa = supabase.createClient(SUPA_URL, SUPA_KEY);
+
+let prospects = [];
+let currentUser = null;
+let periodDays = 30;
+let editIndex = null;
+let charts = {};
+const STAR_LABELS = ['','😐 Passable','🙂 Correct','😊 Bien','🌟 Très bien','🔥 Excellent'];
+
+// AUTH
+async function initAuth() {
+  const { data: { session } } = await supa.auth.getSession();
+  if (session) {
+    currentUser = session.user;
+    showApp();
+    await loadProspects();
+  } else {
+    showLogin();
+  }
+}
+
+function showLogin() {
+  document.getElementById('loginScreen').style.display = 'flex';
+  document.getElementById('signupScreen').style.display = 'none';
+  document.getElementById('loginScreen').style.cssText += ';display:flex';
+}
+function showSignup() {
+  document.getElementById('loginScreen').style.display = 'none';
+  document.getElementById('signupScreen').style.display = 'flex';
+}
+function showApp() {
+  document.getElementById('loginScreen').style.display = 'none';
+  document.getElementById('signupScreen').style.display = 'none';
+}
+
+async function handleLogin() {
+  const email = document.getElementById('loginEmail').value.trim();
+  const password = document.getElementById('loginPassword').value;
+  const errEl = document.getElementById('loginError');
+  errEl.style.display = 'none';
+  if (!email || !password) { errEl.textContent = 'Email et mot de passe requis'; errEl.style.display = 'block'; return; }
+  const btn = document.querySelector('#loginScreen .btn-primary');
+  btn.textContent = 'Connexion...'; btn.disabled = true;
+  const { data, error } = await supa.auth.signInWithPassword({ email, password });
+  btn.textContent = 'Se connecter'; btn.disabled = false;
+  if (error) { errEl.textContent = 'Email ou mot de passe incorrect'; errEl.style.display = 'block'; return; }
+  currentUser = data.user;
+  showApp();
+  await loadProspects();
+}
+
+async function handleSignup() {
+  const email = document.getElementById('signupEmail').value.trim();
+  const password = document.getElementById('signupPassword').value;
+  const errEl = document.getElementById('signupError');
+  const sucEl = document.getElementById('signupSuccess');
+  errEl.style.display = 'none'; sucEl.style.display = 'none';
+  if (!email || !password) { errEl.textContent = 'Email et mot de passe requis'; errEl.style.display = 'block'; return; }
+  if (password.length < 6) { errEl.textContent = 'Mot de passe minimum 6 caractères'; errEl.style.display = 'block'; return; }
+  const btn = document.querySelector('#signupScreen .btn-primary');
+  btn.textContent = 'Création...'; btn.disabled = true;
+  const { error } = await supa.auth.signUp({ email, password });
+  btn.textContent = 'Créer le compte'; btn.disabled = false;
+  if (error) { errEl.textContent = error.message; errEl.style.display = 'block'; return; }
+  sucEl.textContent = '✅ Compte créé ! Vérifie ton email pour confirmer, puis connecte-toi.';
+  sucEl.style.display = 'block';
+}
+
+async function handleLogout() {
+  await supa.auth.signOut();
+  prospects = []; currentUser = null;
+  showLogin();
+}
+
+// DONNÉES SUPABASE
+async function loadProspects() {
+  const { data, error } = await supa.from('prospects').select('*').eq('user_id', currentUser.id).order('date_contact', { ascending: false });
+  if (error) { notify('❌ Erreur de chargement'); return; }
+  prospects = (data || []).map(r => ({ ...r.data, _id: r.id }));
+  render();
+}
+
+async function save() {
+  // localStorage backup
+  localStorage.setItem('perftrack_cf_v2', JSON.stringify(prospects));
+}
+
+async function saveProspect(p, idx) {
+  if (idx !== null && prospects[idx]._id) {
+    // UPDATE
+    const { error } = await supa.from('prospects').update({ data: p, updated_at: new Date().toISOString() }).eq('id', prospects[idx]._id);
+    if (error) { notify('❌ Erreur de sauvegarde'); return false; }
+    p._id = prospects[idx]._id;
+    prospects[idx] = p;
+  } else {
+    // INSERT
+    const { data, error } = await supa.from('prospects').insert({ user_id: currentUser.id, data: p, created_at: new Date().toISOString(), updated_at: new Date().toISOString() }).select().single();
+    if (error) { notify('❌ Erreur de sauvegarde'); return false; }
+    p._id = data.id;
+    prospects.push(p);
+    prospects.sort((a,b) => new Date(b.dateContact) - new Date(a.dateContact));
+  }
+  save();
+  return true;
+}
+
+async function deleteProspectFromDB(idx) {
+  const p = prospects[idx];
+  if (p._id) {
+    const { error } = await supa.from('prospects').delete().eq('id', p._id);
+    if (error) { notify('❌ Erreur suppression'); return false; }
+  }
+  prospects.splice(idx, 1);
+  save();
+  return true;
+}
+
+async function resetData() {
+  if (prospects.length === 0) { notify('⚠️ Aucune donnée à effacer'); return; }
+  const choix = confirm('⚠️ Remise à zéro — ' + prospects.length + ' prospect(s) seront supprimés.\n\nCliquez OK pour sauvegarder d\'abord, ou Annuler pour effacer directement sans sauvegarder.');
+  if (choix) { exportData(); }
+  const confirme = confirm('Confirmer la remise à zéro ? Cette action est irréversible.');
+  if (!confirme) return;
+  const { error } = await supa.from('prospects').delete().eq('user_id', currentUser.id);
+  if (error) { notify('❌ Erreur lors de la remise à zéro'); return; }
+  prospects = []; save(); render(); notify('🗑️ Données remises à zéro');
+}
+
+function exportData() {
+  const data = { version: 2, exportedAt: new Date().toISOString(), prospects };
+  const blob = new Blob([JSON.stringify(data, null, 2)], { type: 'application/json' });
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement('a');
+  const date = new Date().toISOString().slice(0,10);
+  a.href = url; a.download = `perftrack-sauvegarde-${date}.json`;
+  a.click(); URL.revokeObjectURL(url);
+  notify('💾 Sauvegarde téléchargée !');
+}
+
+async function importData(event) {
+  const file = event.target.files[0];
+  if (!file) return;
+  const reader = new FileReader();
+  reader.onload = async e => {
+    try {
+      const data = JSON.parse(e.target.result);
+      const imported = data.prospects || data;
+      if (!Array.isArray(imported)) throw new Error('Format invalide');
+      if (!confirm(`Restaurer ${imported.length} prospect(s) ?\n\nCela remplacera toutes tes données actuelles.`)) return;
+      // Supprimer les existants
+      await supa.from('prospects').delete().eq('user_id', currentUser.id);
+      // Insérer les importés
+      const rows = imported.map(p => ({ user_id: currentUser.id, data: p, created_at: new Date().toISOString(), updated_at: new Date().toISOString() }));
+      const { error } = await supa.from('prospects').insert(rows);
+      if (error) { notify('❌ Erreur lors de la restauration'); return; }
+      await loadProspects();
+      notify(`✅ ${imported.length} prospect(s) restauré(s) !`);
+    } catch(err) {
+      notify('❌ Fichier invalide — utilise une sauvegarde PerfTrack');
+    }
+    event.target.value = '';
+  };
+  reader.readAsText(file);
+}
+function notify(msg) {
+  const n = document.getElementById('notif');
+  n.textContent = msg; n.classList.add('show');
+  setTimeout(() => n.classList.remove('show'), 2800);
+}
+
+function setPeriod(btn, days) {
+  periodDays = days;
+  document.querySelectorAll('[data-period]').forEach(b => b.classList.remove('active'));
+  btn.classList.add('active');
+  render();
+}
+
+function getFiltered() {
+  const now = Date.now();
+  return prospects.filter(p => (now - new Date(p.dateContact+'T00:00:00').getTime()) <= periodDays*86400000);
+}
+
+// STAR RATING
+function setStar(field, val) {
+  document.getElementById(field).value = val;
+  const row = document.querySelector(`[data-field="${field}"]`);
+  if (!row) return;
+  row.querySelectorAll('.star-btn').forEach(b => {
+    b.classList.toggle('active', +b.dataset.val <= val);
+  });
+  const lbl = document.getElementById('label-' + field);
+  if (lbl) lbl.textContent = STAR_LABELS[val] || '—';
+}
+function renderStars(field, val) { setStar(field, +val || 0); }
+function getStar(field) { return +document.getElementById(field)?.value || 0; }
+
+// MODAL
+function openModal(idx = null) {
+  editIndex = idx;
+  const btnDel = document.getElementById('btnDelete');
+  // Reset all stars
+  ['fR1impression','fR2sentiment','fR2reactionPreco'].forEach(f => renderStars(f, 0));
+
+  if (idx !== null) {
+    const p = prospects[idx];
+    document.getElementById('modalTitle').textContent = '✏️ ' + p.nom;
+    btnDel.style.display = 'inline-block';
+    sf('fNom', p.nom); sf('fDateContact', p.dateContact); sf('fCanal', p.canal||'');
+    sf('fNotes', p.notes||'');
+    sc('fReponse', p.reponse); sc('fRdvPlace', p.rdvPlace);
+    sc('fDocsEnvoyes', p.docsEnvoyes); sc('fDocsRecus', p.docsRecus);
+    sf('fDateR1', p.dateR1||''); sf('fDateR2', p.dateR2||''); sf('fDateR3', p.dateR3||''); sf('fDateR4', p.dateR4||'');
+    // R1
+    sc('fR1', p.r1); sc('fCrR1', p.crR1);
+    sf('fR1potentiel', p.r1potentiel||''); sf('fR1recoNoms', p.r1recoNoms||'');
+    renderStars('fR1impression', p.r1impression||0);
+    // R2
+    sc('fR2', p.r2); sc('fDocsPreco', p.docsPreco);
+    sf('fR2recoNoms', p.r2recoNoms||''); sf('fR2recoNumeros', p.r2recoNumeros||'');
+    renderStars('fR2sentiment', p.r2sentiment||0);
+    renderStars('fR2reactionPreco', p.r2reactionPreco||0);
+    // R3
+    sc('fR3', p.r3); sc('fPrecoModif', p.precoModif); sc('fR3Signe', p.r3Signe);
+    sf('fR3recoNoms', p.r3recoNoms||''); sf('fR3recoNumeros', p.r3recoNumeros||'');
+    sf('fR3retour', p.r3retour||'');
+    // R4
+    sc('fR4', p.r4); sf('fR4montant', p.r4montant||'');
+    sf('fR4recoNoms', p.r4recoNoms||''); sf('fR4recoNumeros', p.r4recoNumeros||'');
+  } else {
+    document.getElementById('modalTitle').textContent = 'Nouveau prospect';
+    btnDel.style.display = 'none';
+    ['fNom','fNotes','fR1potentiel','fR1recoNoms','fR2recoNoms','fR2recoNumeros',
+     'fR3recoNoms','fR3recoNumeros','fR3retour','fR4montant','fR4recoNoms','fR4recoNumeros'].forEach(id => sf(id,''));
+    sf('fDateContact', new Date().toISOString().split('T')[0]); sf('fCanal','');
+    ['fDateR1','fDateR2','fDateR3','fDateR4'].forEach(id => sf(id,''));
+    ['fReponse','fRdvPlace','fDocsEnvoyes','fDocsRecus','fR1','fCrR1','fR2','fDocsPreco',
+     'fR3','fPrecoModif','fR3Signe','fR4'].forEach(id => sc(id, false));
+  }
+  document.getElementById('modalOverlay').classList.add('open');
+  document.getElementById('modalOverlay').scrollTop = 0;
+  updateSectionLocks();
+}
+function closeModal() { document.getElementById('modalOverlay').classList.remove('open'); editIndex = null; }
+function closeModalOutside(e) { if (e.target.id === 'modalOverlay') closeModal(); }
+function sf(id, val) { const el = document.getElementById(id); if (el) el.value = val ?? ''; }
+function sc(id, val) { const el = document.getElementById(id); if (el) el.checked = !!val; }
+function gc(id) { return document.getElementById(id)?.checked || false; }
+function gf(id) { return document.getElementById(id)?.value || ''; }
+
+async function submitProspect() {
+  const nom = gf('fNom').trim(), dateContact = gf('fDateContact');
+  if (!nom || !dateContact) { notify('⚠️ Nom et date de contact requis'); return; }
+
+  // VALIDATIONS LOGIQUES
+  if (gc('fRdvPlace') && !gc('fReponse')) { notify('⚠️ Impossible de placer des RDV sans réponse de l\'échange informel'); return; }
+  if (gc('fR1') && !gc('fRdvPlace')) { notify('⚠️ Impossible de réaliser le R1 sans avoir placé les RDV'); return; }
+  if (gc('fR1') && !gf('fDateR1')) { notify('⚠️ Merci d\'indiquer la date du R1'); return; }
+  if (gc('fCrR1') && !gc('fR1')) { notify('⚠️ Impossible d\'envoyer le CR R1 sans avoir réalisé le R1'); return; }
+  if (gc('fDocsRecus') && !gc('fR1')) { notify('⚠️ Les docs client sont liés au process R1 — merci de cocher R1 d\'abord'); return; }
+  if (gc('fR2') && !gc('fR1')) { notify('⚠️ Impossible de réaliser le R2 sans avoir réalisé le R1'); return; }
+  if (gc('fR2') && !gf('fDateR2')) { notify('⚠️ Merci d\'indiquer la date du R2'); return; }
+  if (gc('fDocsPreco') && !gc('fR2')) { notify('⚠️ Impossible d\'envoyer les docs de préconisation sans avoir réalisé le R2'); return; }
+  if (gc('fR3') && !gc('fR2')) { notify('⚠️ Impossible de réaliser le R3 sans avoir réalisé le R2'); return; }
+  if (gc('fR3') && !gf('fDateR3')) { notify('⚠️ Merci d\'indiquer la date du R3'); return; }
+  if (gc('fPrecoModif') && !gc('fR3')) { notify('⚠️ La modification de préco est liée au R3'); return; }
+  if (gc('fR3Signe') && !gc('fR3')) { notify('⚠️ L\'accord de signature est validé au R3'); return; }
+  if (gc('fR4') && !gc('fR3')) { notify('⚠️ Impossible de réaliser le R4 sans avoir réalisé le R3'); return; }
+  if (gc('fR4') && !gc('fR3Signe')) { notify('⚠️ Le R4 nécessite un accord de signature validé au R3'); return; }
+  if (gc('fR4') && !gf('fDateR4')) { notify('⚠️ Merci d\'indiquer la date du R4'); return; }
+
+  const p = {
+    nom, dateContact, canal: gf('fCanal'), notes: gf('fNotes'),
+    reponse: gc('fReponse'), rdvPlace: gc('fRdvPlace'),
+    docsEnvoyes: gc('fDocsEnvoyes'), docsRecus: gc('fDocsRecus'),
+    dateR1: gf('fDateR1'), dateR2: gf('fDateR2'), dateR3: gf('fDateR3'), dateR4: gf('fDateR4'),
+    r1: gc('fR1'), crR1: gc('fCrR1'),
+    r1impression: getStar('fR1impression'), r1potentiel: +gf('fR1potentiel')||0, r1recoNoms: +gf('fR1recoNoms')||0,
+    r2: gc('fR2'), docsPreco: gc('fDocsPreco'),
+    r2sentiment: getStar('fR2sentiment'), r2reactionPreco: getStar('fR2reactionPreco'),
+    r2recoNoms: +gf('fR2recoNoms')||0, r2recoNumeros: +gf('fR2recoNumeros')||0,
+    r3: gc('fR3'), precoModif: gc('fPrecoModif'), r3Signe: gc('fR3Signe'),
+    r3recoNoms: +gf('fR3recoNoms')||0, r3recoNumeros: +gf('fR3recoNumeros')||0, r3retour: gf('fR3retour'),
+    r4: gc('fR4'), r4montant: +gf('fR4montant')||0,
+    r4recoNoms: +gf('fR4recoNoms')||0, r4recoNumeros: +gf('fR4recoNumeros')||0,
+    createdAt: editIndex !== null ? prospects[editIndex].createdAt : Date.now()
+  };
+  const btn = document.getElementById('submitBtn');
+  btn.textContent = 'Enregistrement...'; btn.disabled = true;
+  const ok = await saveProspect(p, editIndex);
+  btn.textContent = editIndex !== null ? 'Mettre à jour' : 'Enregistrer'; btn.disabled = false;
+  if (!ok) return;
+  notify(editIndex !== null ? '✅ Prospect mis à jour' : '✅ Prospect ajouté');
+  save(); closeModal(); render();
+}
+
+// Grisage dynamique des sections selon l'avancement
+function updateSectionLocks() {
+  const reponse = gc('fReponse');
+  const rdv = gc('fRdvPlace');
+  const r1 = gc('fR1');
+  const r2 = gc('fR2');
+  const r3 = gc('fR3');
+  const r3signe = gc('fR3Signe');
+
+  lockSection('sectionDocs', !rdv, 'Disponible après placement des RDV');
+  lockSection('sectionR1', !rdv, 'Disponible après placement des RDV');
+  lockSection('sectionR2', !r1, 'Disponible après R1 réalisé');
+  lockSection('sectionR3', !r2, 'Disponible après R2 réalisé');
+  lockSection('sectionR4', !r3 || !r3signe, !r3 ? 'Disponible après R3 réalisé' : 'Disponible après accord de signature au R3');
+}
+
+function lockSection(id, locked, reason) {
+  const el = document.getElementById(id);
+  if (!el) return;
+  el.style.opacity = locked ? '0.4' : '1';
+  el.style.pointerEvents = locked ? 'none' : 'auto';
+  const badge = el.querySelector('.lock-badge');
+  if (badge) badge.textContent = locked ? '🔒 ' + reason : '';
+}
+
+async function deleteProspect() {
+  if (!confirm('Supprimer ce prospect ?')) return;
+  const ok = await deleteProspectFromDB(editIndex);
+  if (!ok) return;
+  closeModal(); render(); notify('🗑️ Supprimé');
+}
+
+function getStage(p) {
+  if (p.r4) return 5;
+  if (p.r3) return 4;
+  if (p.r2) return 3;
+  if (p.r1) return 2;
+  if (p.rdvPlace) return 1;
+  return 0;
+}
+
+const STAGES = [
+  { id:0, label:'Contacté', color:'#4a7a9b', bg:'rgba(74,122,155,0.15)' },
+  { id:1, label:'RDV placés', color:'#c07af5', bg:'rgba(192,122,245,0.15)' },
+  { id:2, label:'R1 · Découverte', color:'#5bc4f5', bg:'rgba(91,196,245,0.15)' },
+  { id:3, label:'R2 · Préco', color:'#4ae8b0', bg:'rgba(74,232,176,0.15)' },
+  { id:4, label:'R3 · Validation', color:'#f5a623', bg:'rgba(245,166,35,0.15)' },
+  { id:5, label:'R4 · Signé ✅', color:'#f5e642', bg:'rgba(245,230,66,0.15)' },
+];
+
+function fmtDate(d) { if (!d) return '—'; return new Date(d+'T00:00:00').toLocaleDateString('fr-FR',{day:'2-digit',month:'short'}); }
+function fmtEuro(v) { if (!v) return '—'; return new Intl.NumberFormat('fr-FR',{style:'currency',currency:'EUR',maximumFractionDigits:0}).format(v); }
+function starsDisplay(v) { if (!v) return '<span style="color:var(--muted)">—</span>'; return '⭐'.repeat(v) + `<span style="color:var(--muted);font-size:10px"> ${v}/5</span>`; }
+function avg(arr) { const f=arr.filter(v=>v>0); return f.length ? (f.reduce((s,v)=>s+v,0)/f.length).toFixed(1) : '—'; }
+function daysBetween(d1,d2) { if(!d1||!d2) return null; return Math.round((new Date(d2+'T00:00:00')-new Date(d1+'T00:00:00'))/86400000); }
+
+function render() {
+  const f = getFiltered();
+  renderKPIs(f); renderPipeline(f); renderTable(f); renderStats(f);
+}
+
+// OBJECTIFS — sauvegardés localement
+let objectifs = JSON.parse(localStorage.getItem('perftrack_objectifs') || 'null') || {
+  prospects: 20,
+  txReponse: 40,
+  txRdv: 70,
+  txSign: 50,
+  duree: 60,
+  recoMoy: 3,
+  caMoy: 30000,
+};
+function saveObjectifs() { localStorage.setItem('perftrack_objectifs', JSON.stringify(objectifs)); }
+
+function editObjectif(key, label, isEuro) {
+  const current = objectifs[key];
+  const input = prompt(`Objectif — ${label} :\n(actuel : ${isEuro ? current + ' €' : current + (key==='duree'?'j':'%')})`, current);
+  if (input === null) return;
+  const val = +input;
+  if (isNaN(val) || val <= 0) { alert('Valeur invalide'); return; }
+  objectifs[key] = val;
+  saveObjectifs();
+  render();
+}
+
+function renderKPIs(f) {
+  const total = f.length;
+  const avecReponse = f.filter(p=>p.reponse).length;
+  const avecRdv = f.filter(p=>p.rdvPlace).length;
+  const signes = f.filter(p=>p.r4);
+  const r3total = f.filter(p=>p.r3).length;
+  const precoModif = f.filter(p=>p.r3&&p.precoModif).length;
+  const txReponse = total>0?((avecReponse/total)*100):0;
+  const txRdv = avecReponse>0?((avecRdv/avecReponse)*100):0;
+  const txSign = avecRdv>0?((signes.length/avecRdv)*100):0;
+  const txModif = r3total>0?((precoModif/r3total)*100):0;
+  const durees = f.filter(p=>p.r4&&p.dateR4&&p.dateContact).map(p=>daysBetween(p.dateContact,p.dateR4)).filter(d=>d!==null);
+  const dureeAvg = durees.length>0?Math.round(durees.reduce((s,d)=>s+d,0)/durees.length):null;
+  const totalRecoNoms = f.reduce((s,p)=>(s+(p.r1recoNoms||0)+(p.r2recoNoms||0)+(p.r3recoNoms||0)+(p.r4recoNoms||0)),0);
+  const rdvRealises = f.reduce((s,p)=>s+[p.r1,p.r2,p.r3,p.r4].filter(Boolean).length,0);
+  const recoMoy = rdvRealises>0?(totalRecoNoms/rdvRealises):null;
+  const caTotal = signes.reduce((s,p)=>s+(p.r4montant||0),0);
+  const caMoy = signes.length>0?(caTotal/signes.length):null;
+
+  function progressBar(val, target, color, isInverse) {
+    if (val === null || val === undefined) return '';
+    const pct = Math.min(100, (val/target)*100);
+    const ok = isInverse ? val <= target : val >= target;
+    const barColor = ok ? 'var(--green)' : color;
+    const remaining = isInverse
+      ? (ok ? '✓ Atteint' : `${(val-target).toFixed(0)} de plus`)
+      : (ok ? '✓ Atteint' : `${(target-val).toFixed(1)} restant`);
+    return `<div class="progress-wrap">
+      <div class="progress-info"><span style="color:var(--muted)">${target}</span><span style="color:${ok?'var(--green)':'var(--orange)'}">${remaining}</span></div>
+      <div class="progress-bar"><div class="progress-fill" style="width:${pct}%;background:${barColor}"></div></div>
+    </div>`;
+  }
+
+  function pencil(key, label, isEuro=false) {
+    return `<button onclick="editObjectif('${key}','${label}',${isEuro})" style="background:none;border:none;cursor:pointer;color:var(--muted);font-size:11px;padding:0 0 0 4px;line-height:1;vertical-align:middle;transition:color 0.2s" title="Modifier l'objectif" onmouseover="this.style.color='var(--accent)'" onmouseout="this.style.color='var(--muted)'">✏️</button>`;
+  }
+
+  const kpis = [
+    {
+      icon:'📡', label:'Prospects (période)', value:total, display:`${total}`, color:'#5bc4f5',
+      objLabel:`Objectif : ${objectifs.prospects}`, pencilKey:'prospects', pencilLabel:'Nombre de prospects',
+      bar: progressBar(total, objectifs.prospects, '#5bc4f5')
+    },
+    {
+      icon:'💬', label:'Taux de réponse', value:txReponse, display:`${txReponse.toFixed(1)}%`, color:'#4ae8b0',
+      objLabel:`Objectif : ${objectifs.txReponse}%`, pencilKey:'txReponse', pencilLabel:'Taux de réponse (%)',
+      bar: progressBar(txReponse, objectifs.txReponse, '#4ae8b0')
+    },
+    {
+      icon:'📅', label:'Prospect → RDV', value:txRdv, display:`${txRdv.toFixed(1)}%`, color:'#c07af5',
+      objLabel:`Objectif : ${objectifs.txRdv}%`, pencilKey:'txRdv', pencilLabel:'Taux prospect → RDV (%)',
+      bar: progressBar(txRdv, objectifs.txRdv, '#c07af5')
+    },
+    {
+      icon:'✍️', label:'RDV → Signature', value:txSign, display:`${txSign.toFixed(1)}%`, color:'#f5a623',
+      objLabel:`Objectif : ${objectifs.txSign}%`, pencilKey:'txSign', pencilLabel:'Taux RDV → Signature (%)',
+      bar: progressBar(txSign, objectifs.txSign, '#f5a623')
+    },
+    {
+      icon:'🔄', label:'Préco modifiée (R3)', value:txModif, display:`${txModif.toFixed(1)}%`, color:'#f5605a',
+    },
+    {
+      icon:'⏱️', label:'Durée moy. contact→signe', value:dureeAvg, display: dureeAvg!==null?`${dureeAvg}j`:'—', color:'#7eb8d4',
+      objLabel: `Objectif : ${objectifs.duree}j`, pencilKey:'duree', pencilLabel:'Durée moyenne (jours)',
+      bar: dureeAvg!==null ? progressBar(dureeAvg, objectifs.duree, '#7eb8d4', true) : ''
+    },
+    {
+      icon:'🤝', label:'Reco moy. / RDV', value:recoMoy, display: recoMoy!==null?recoMoy.toFixed(1):'—', color:'#c07af5',
+      objLabel:`Objectif : ${objectifs.recoMoy}`, pencilKey:'recoMoy', pencilLabel:'Reco moyenne par RDV',
+      bar: recoMoy!==null ? progressBar(recoMoy, objectifs.recoMoy, '#c07af5') : ''
+    },
+    {
+      icon:'💰', label:'CA signé (période)', value:caTotal, display: caTotal>0?fmtEuro(caTotal):'—', color:'#f5e642', small:true,
+    },
+    {
+      icon:'📈', label:'CA moyen / client signé', value:caMoy, display: caMoy!==null?fmtEuro(Math.round(caMoy)):'—', color:'#4ae8b0', small:true,
+      objLabel:`Objectif : ${fmtEuro(objectifs.caMoy)}`, pencilKey:'caMoy', pencilLabel:'CA moyen par client (€)', pencilEuro:true,
+      bar: caMoy!==null ? progressBar(caMoy, objectifs.caMoy, '#4ae8b0') : ''
+    },
+  ];
+
+  document.getElementById('kpiGrid').innerHTML = kpis.map(k=>`
+    <div class="kpi-card">
+      <div class="kpi-icon">${k.icon}</div>
+      <div class="kpi-value" style="color:${k.color};font-size:${k.small?'18px':'26px'}">${k.display}</div>
+      <div class="kpi-label">${k.label}</div>
+      ${k.pencilKey ? `<div style="font-size:10px;color:var(--muted);margin-top:6px">${k.objLabel}${pencil(k.pencilKey, k.pencilLabel, k.pencilEuro||false)}</div>` : ''}
+      ${k.bar||''}
+    </div>`).join('');
+}
+
+function renderPipeline(f) {
+  const board = document.getElementById('pipelineBoard');
+  const empty = document.getElementById('emptyPipeline');
+  if (f.length===0) { board.innerHTML=''; empty.style.display='block'; return; }
+  empty.style.display='none';
+  board.innerHTML = STAGES.map(stage=>{
+    const items = f.filter(p=>getStage(p)===stage.id);
+    const cards = items.map(p=>{
+      const idx = prospects.indexOf(p);
+      const flags=[];
+      if (!p.docsRecus&&p.rdvPlace) flags.push('⚠️ Docs manquants');
+      if (p.precoModif) flags.push('🔄 Préco modifiée');
+      const imp = p.r1impression?`<div class="pipeline-card-score">R1: ${'⭐'.repeat(p.r1impression)}</div>`:'';
+      const pot = p.r1potentiel?`<div class="pipeline-card-meta" style="color:var(--yellow)">${fmtEuro(p.r1potentiel)}</div>`:'';
+      return `<div class="pipeline-card" onclick="openModal(${idx})">
+        <div class="pipeline-card-name">${p.nom}</div>
+        <div class="pipeline-card-meta">${fmtDate(p.dateContact)}${p.canal?' · '+p.canal:''}</div>
+        ${pot}${imp}
+        ${flags.map(f=>`<div class="pipeline-card-flag">${f}</div>`).join('')}
+      </div>`;
+    }).join('')||`<div style="font-size:11px;color:var(--muted);text-align:center;padding:14px 0">—</div>`;
+    return `<div class="pipeline-col">
+      <div class="pipeline-col-title" style="color:${stage.color}">${stage.label}<span class="pipeline-badge" style="color:${stage.color}">${items.length}</span></div>
+      ${cards}
+    </div>`;
+  }).join('');
+}
+
+function renderTable(f) {
+  const body = document.getElementById('tableBody');
+  if (f.length===0){body.innerHTML=`<div class="empty"><div class="empty-icon">📋</div><div>Aucun prospect sur cette période</div></div>`;return;}
+  const ck = v => v?`<span style="color:var(--green)">✓</span>`:`<span style="color:var(--muted)">·</span>`;
+  body.innerHTML = f.map(p=>{
+    const idx=prospects.indexOf(p);
+    const stage=STAGES[getStage(p)];
+    return `<div class="table-row" onclick="openModal(${idx})">
+      <span style="font-weight:500">${p.nom}</span>
+      <span style="color:var(--muted);font-size:11px">${p.canal||'—'}</span>
+      <span style="font-size:11px">${fmtDate(p.dateContact)}</span>
+      <span style="text-align:center">${ck(p.rdvPlace)}</span>
+      <span style="text-align:center">${ck(p.r1)}</span>
+      <span style="text-align:center">${ck(p.r2)}</span>
+      <span style="text-align:center">${ck(p.r3)}${p.precoModif?' 🔄':''}</span>
+      <span style="text-align:center">${ck(p.r4)}</span>
+      <span style="font-size:11px;color:var(--yellow)">${p.r1potentiel?fmtEuro(p.r1potentiel):'—'}</span>
+      <span><span class="status-pill" style="background:${stage.bg};color:${stage.color}">${stage.label}</span></span>
+    </div>`;
+  }).join('');
+}
+
+function renderStats(f) {
+  const total=f.length;
+
+  // --- STAT CARDS ---
+  const signes = f.filter(p=>p.r4);
+  const avecPotentiel = f.filter(p=>p.r1potentiel>0);
+  const caTotal = signes.reduce((s,p)=>s+(p.r4montant||0),0);
+  const caMoy = signes.length>0 ? caTotal/signes.length : 0;
+  const potentielTotal = avecPotentiel.reduce((s,p)=>s+(p.r1potentiel||0),0);
+  const txRealisation = potentielTotal>0 ? ((caTotal/potentielTotal)*100).toFixed(1) : null;
+
+  // Reco moyennes : noms R1 par R1 réalisé, numéros (R2+R3+R4) par RDV réalisés après R1
+  const r1realises = f.filter(p=>p.r1);
+  const r1NomsMoy = r1realises.length>0 ? (r1realises.reduce((s,p)=>s+(p.r1recoNoms||0),0)/r1realises.length).toFixed(1) : '—';
+  const rdvAvecNums = f.filter(p=>p.r2||p.r3||p.r4);
+  const totalNums = f.reduce((s,p)=>s+(p.r2recoNumeros||0)+(p.r3recoNumeros||0)+(p.r4recoNumeros||0),0);
+  const numsMoy = rdvAvecNums.length>0 ? (totalNums/rdvAvecNums.length).toFixed(1) : '—';
+
+  const statsData = [
+    {icon:'💰', label:'Volume total signé', value: caTotal>0?fmtEuro(caTotal):'—', color:'#f5e642', small:true},
+    {icon:'📊', label:'Volume moyen signé', value: caMoy>0?fmtEuro(Math.round(caMoy)):'—', color:'#4ae8b0', small:true},
+    {icon:'🎯', label:'Réalisation vs potentiel', value: txRealisation!==null?txRealisation:'—', unit: txRealisation!==null?'%':'', color: txRealisation>=70?'#4ae8b0':'#f5a623'},
+    {icon:'🤝', label:'Noms reco moy. au R1', value: r1NomsMoy, unit:'', color:'#c07af5'},
+    {icon:'📞', label:'Numéros reco moy. / RDV', value: numsMoy, unit:'', color:'#5bc4f5'},
+  ];
+  document.getElementById('statsCards').innerHTML = statsData.map(k=>`
+    <div class="kpi-card">
+      <div class="kpi-icon">${k.icon}</div>
+      <div class="kpi-value" style="color:${k.color};font-size:${k.small?'18px':'26px'}">${k.value}<span class="kpi-unit">${k.unit||''}</span></div>
+      <div class="kpi-label">${k.label}</div>
+    </div>`).join('');
+
+  // --- FUNNEL ---
+  const steps=[
+    {label:'Contactés',val:total,color:'#4a7a9b'},
+    {label:'Réponse reçue',val:f.filter(p=>p.reponse).length,color:'#5bc4f5'},
+    {label:'RDV placés',val:f.filter(p=>p.rdvPlace).length,color:'#c07af5'},
+    {label:'R1 réalisé',val:r1realises.length,color:'#4ae8b0'},
+    {label:'R2 réalisé',val:f.filter(p=>p.r2).length,color:'#f5a623'},
+    {label:'R3 réalisé',val:f.filter(p=>p.r3).length,color:'#f5605a'},
+    {label:'R4 · Signé',val:signes.length,color:'#f5e642'},
+  ];
+  const mx=total||1;
+  document.getElementById('funnelChart').innerHTML=steps.map(s=>`
+    <div class="funnel-step">
+      <div class="funnel-label">${s.label}</div>
+      <div class="funnel-bar-wrap"><div class="funnel-bar" style="width:${(s.val/mx*100).toFixed(1)}%;background:${s.color}25;color:${s.color};border-left:3px solid ${s.color}">${s.val} prospect${s.val>1?'s':''}</div></div>
+      <div class="funnel-pct">${total>0?((s.val/total)*100).toFixed(0):0}%</div>
+    </div>`).join('');
+
+  // --- PAR MOIS ---
+  const byMonth={};
+  f.forEach(p=>{const m=p.dateContact.slice(0,7);byMonth[m]=(byMonth[m]||0)+1;});
+  const months=Object.keys(byMonth).sort();
+  mkChart('chartMensuel','bar',{
+    labels:months.map(m=>{const[y,mo]=m.split('-');return new Date(+y,+mo-1).toLocaleDateString('fr-FR',{month:'short',year:'2-digit'});}),
+    datasets:[{label:'Prospects',data:months.map(m=>byMonth[m]),backgroundColor:'rgba(91,196,245,0.7)',borderRadius:4}]
+  },baseOpts());
+
+  // --- CANAUX ---
+  const byCanal={};
+  f.forEach(p=>{const c=p.canal||'Non renseigné';byCanal[c]=(byCanal[c]||0)+1;});
+  const canaux=Object.entries(byCanal);
+  const cColors=['#5bc4f5','#4ae8b0','#c07af5','#f5a623','#f5605a','#f5e642'];
+  mkChart('chartCanaux','doughnut',{
+    labels:canaux.map(c=>c[0]),
+    datasets:[{data:canaux.map(c=>c[1]),backgroundColor:cColors.slice(0,canaux.length),borderWidth:0,hoverOffset:4}]
+  },{responsive:true,maintainAspectRatio:false,animation:{duration:600},
+    plugins:{legend:{display:true,labels:{color:'#7eb8d4',font:{size:11},boxWidth:12}},
+    tooltip:{backgroundColor:'#0f1923',borderColor:'#1e3a4f',borderWidth:1,titleColor:'#7eb8d4',bodyColor:'#d4e8f5'}}
+  });
+
+  // --- VOLUME SIGNÉ VS POTENTIEL par mois ---
+  const volByMonth={};
+  f.forEach(p=>{
+    const m=p.dateContact.slice(0,7);
+    if(!volByMonth[m])volByMonth[m]={pot:0,sign:0};
+    if(p.r1potentiel>0) volByMonth[m].pot+=p.r1potentiel;
+    if(p.r4&&p.r4montant>0) volByMonth[m].sign+=p.r4montant;
+  });
+  const volMonths=Object.keys(volByMonth).sort();
+  mkChart('chartVolumes','bar',{
+    labels:volMonths.map(m=>{const[y,mo]=m.split('-');return new Date(+y,+mo-1).toLocaleDateString('fr-FR',{month:'short',year:'2-digit'});}),
+    datasets:[
+      {label:'Potentiel estimé',data:volMonths.map(m=>volByMonth[m].pot),backgroundColor:'rgba(245,166,35,0.4)',borderRadius:4},
+      {label:'Signé',data:volMonths.map(m=>volByMonth[m].sign),backgroundColor:'rgba(245,230,66,0.75)',borderRadius:4},
+    ]
+  },{...baseOpts(),
+    plugins:{...baseOpts().plugins,legend:{display:true,labels:{color:'#7eb8d4',font:{size:11},boxWidth:10}}},
+    scales:{...baseOpts().scales,y:{...baseOpts().scales.y,ticks:{...baseOpts().scales.y.ticks,callback:v=>v>=1000?Math.round(v/1000)+'k€':v+'€'}}}
+  });
+
+  // --- RECO MOYENNES : noms R1 vs numéros (R2+R3+R4) par mois ---
+  const recoByMonth={};
+  f.forEach(p=>{
+    const m=p.dateContact.slice(0,7);
+    if(!recoByMonth[m])recoByMonth[m]={nomsR1:0,countR1:0,nums:0,countRdv:0};
+    if(p.r1){recoByMonth[m].nomsR1+=(p.r1recoNoms||0);recoByMonth[m].countR1++;}
+    if(p.r2||p.r3||p.r4){
+      recoByMonth[m].nums+=(p.r2recoNumeros||0)+(p.r3recoNumeros||0)+(p.r4recoNumeros||0);
+      recoByMonth[m].countRdv++;
+    }
+  });
+  const recoMonths=Object.keys(recoByMonth).sort();
+  mkChart('chartRecos','bar',{
+    labels:recoMonths.map(m=>{const[y,mo]=m.split('-');return new Date(+y,+mo-1).toLocaleDateString('fr-FR',{month:'short',year:'2-digit'});}),
+    datasets:[
+      {label:'Noms moy. / R1',data:recoMonths.map(m=>{const d=recoByMonth[m];return d.countR1>0?(d.nomsR1/d.countR1).toFixed(1):0;}),backgroundColor:'rgba(192,122,245,0.75)',borderRadius:4},
+      {label:'Numéros moy. / RDV',data:recoMonths.map(m=>{const d=recoByMonth[m];return d.countRdv>0?(d.nums/d.countRdv).toFixed(1):0;}),backgroundColor:'rgba(74,232,176,0.75)',borderRadius:4},
+    ]
+  },{...baseOpts(),plugins:{...baseOpts().plugins,legend:{display:true,labels:{color:'#7eb8d4',font:{size:11},boxWidth:10}}}});
+}
+
+function mkChart(id,type,data,options){
+  if(charts[id])charts[id].destroy();
+  const ctx=document.getElementById(id);
+  if(!ctx)return;
+  charts[id]=new Chart(ctx,{type,data,options});
+}
+const baseOpts=()=>({
+  responsive:true,maintainAspectRatio:false,animation:{duration:600},
+  plugins:{legend:{display:false},tooltip:{backgroundColor:'#0f1923',borderColor:'#1e3a4f',borderWidth:1,titleColor:'#7eb8d4',bodyColor:'#d4e8f5'}},
+  scales:{
+    x:{grid:{color:'#1a3349'},ticks:{color:'#4a7a9b',font:{size:11}},border:{display:false}},
+    y:{grid:{color:'#1a3349'},ticks:{color:'#4a7a9b',font:{size:11}},border:{display:false}}
+  }
+});
+
+function switchTab(name,btn){
+  document.querySelectorAll('.tab').forEach(t=>t.classList.remove('active'));
+  document.querySelectorAll('.tab-content').forEach(t=>t.classList.remove('active'));
+  btn.classList.add('active');
+  document.getElementById('tab-'+name).classList.add('active');
+  setTimeout(()=>render(),50);
+}
+
+initAuth();
+</script>
+</body>
+</html>
